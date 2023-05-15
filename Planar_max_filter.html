@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1300px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "MGLU3", "label": "MGLU3", "shape": "dot", "title": "MGLU3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "RADL3", "label": "RADL3", "shape": "dot", "title": "RADL3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "AMER3", "label": "AMER3", "shape": "dot", "title": "AMER3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CIEL3", "label": "CIEL3", "shape": "dot", "title": "CIEL3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BRFS3", "label": "BRFS3", "shape": "dot", "title": "BRFS3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "RAIL3", "label": "RAIL3", "shape": "dot", "title": "RAIL3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "RENT3", "label": "RENT3", "shape": "dot", "title": "RENT3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "OIBR3", "label": "OIBR3", "shape": "dot", "title": "OIBR3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CVCB3", "label": "CVCB3", "shape": "dot", "title": "CVCB3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ARZZ3", "label": "ARZZ3", "shape": "dot", "title": "ARZZ3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "KLBN11", "label": "KLBN11", "shape": "dot", "title": "KLBN11"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CCRO3", "label": "CCRO3", "shape": "dot", "title": "CCRO3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "USIM5", "label": "USIM5", "shape": "dot", "title": "USIM5"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "LREN3", "label": "LREN3", "shape": "dot", "title": "LREN3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "VALE3", "label": "VALE3", "shape": "dot", "title": "VALE3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CSNA3", "label": "CSNA3", "shape": "dot", "title": "CSNA3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "JBSS3", "label": "JBSS3", "shape": "dot", "title": "JBSS3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "NTCO3", "label": "NTCO3", "shape": "dot", "title": "NTCO3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CMIG4", "label": "CMIG4", "shape": "dot", "title": "CMIG4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ITSA4", "label": "ITSA4", "shape": "dot", "title": "ITSA4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BBAS3", "label": "BBAS3", "shape": "dot", "title": "BBAS3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "B3SA3", "label": "B3SA3", "shape": "dot", "title": "B3SA3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ITUB4", "label": "ITUB4", "shape": "dot", "title": "ITUB4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "PETR3", "label": "PETR3", "shape": "dot", "title": "PETR3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "PETR4", "label": "PETR4", "shape": "dot", "title": "PETR4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BBDC4", "label": "BBDC4", "shape": "dot", "title": "BBDC4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "YDUQ3", "label": "YDUQ3", "shape": "dot", "title": "YDUQ3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "WEGE3", "label": "WEGE3", "shape": "dot", "title": "WEGE3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BRKM5", "label": "BRKM5", "shape": "dot", "title": "BRKM5"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ELET3", "label": "ELET3", "shape": "dot", "title": "ELET3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ELET6", "label": "ELET6", "shape": "dot", "title": "ELET6"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CSAN3", "label": "CSAN3", "shape": "dot", "title": "CSAN3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ENBR3", "label": "ENBR3", "shape": "dot", "title": "ENBR3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "SBSP3", "label": "SBSP3", "shape": "dot", "title": "SBSP3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "EQTL3", "label": "EQTL3", "shape": "dot", "title": "EQTL3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ABEV3", "label": "ABEV3", "shape": "dot", "title": "ABEV3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "GGBR4", "label": "GGBR4", "shape": "dot", "title": "GGBR4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "HYPE3", "label": "HYPE3", "shape": "dot", "title": "HYPE3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MRFG3", "label": "MRFG3", "shape": "dot", "title": "MRFG3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "TOTS3", "label": "TOTS3", "shape": "dot", "title": "TOTS3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MULT3", "label": "MULT3", "shape": "dot", "title": "MULT3"}]);
+                  edges = new vis.DataSet([{"from": "MGLU3", "title": 1.4494102878607673, "to": "RADL3"}, {"from": "MGLU3", "title": 1.252538592820164, "to": "CIEL3"}, {"from": "MGLU3", "title": 1.4822544724126623, "to": "KLBN11"}, {"from": "MGLU3", "title": 1.4897455285474115, "to": "JBSS3"}, {"from": "MGLU3", "title": 1.3157680755236647, "to": "ELET3"}, {"from": "MGLU3", "title": 1.3071026419788025, "to": "ELET6"}, {"from": "MGLU3", "title": 1.3015483821288176, "to": "ENBR3"}, {"from": "MGLU3", "title": 1.5232669515151185, "to": "ABEV3"}, {"from": "MGLU3", "title": 1.2908399199013973, "to": "HYPE3"}, {"from": "MGLU3", "title": 1.543142205215844, "to": "MRFG3"}, {"from": "MGLU3", "title": 1.2712142988348007, "to": "TOTS3"}, {"from": "MGLU3", "title": 1.2506978035606549, "to": "MULT3"}, {"from": "RADL3", "title": 1.4651087133938976, "to": "AMER3"}, {"from": "RADL3", "title": 1.4764324126048072, "to": "CIEL3"}, {"from": "RADL3", "title": 1.4781332119204214, "to": "BRFS3"}, {"from": "RADL3", "title": 1.4738882936097535, "to": "RAIL3"}, {"from": "RADL3", "title": 1.4751886131758443, "to": "RENT3"}, {"from": "RADL3", "title": 1.4887581092444877, "to": "OIBR3"}, {"from": "RADL3", "title": 1.4769052417567783, "to": "CVCB3"}, {"from": "RADL3", "title": 1.481703952518687, "to": "ARZZ3"}, {"from": "RADL3", "title": 1.7386327771671504, "to": "KLBN11"}, {"from": "RADL3", "title": 1.4999356858609618, "to": "CCRO3"}, {"from": "RADL3", "title": 1.4832840220414008, "to": "USIM5"}, {"from": "RADL3", "title": 1.4836206747748841, "to": "LREN3"}, {"from": "RADL3", "title": 1.484087380217109, "to": "VALE3"}, {"from": "RADL3", "title": 1.5068805495593214, "to": "CSNA3"}, {"from": "RADL3", "title": 1.4903382103329055, "to": "NTCO3"}, {"from": "RADL3", "title": 1.491693628153518, "to": "CMIG4"}, {"from": "RADL3", "title": 1.4926210396368784, "to": "ITSA4"}, {"from": "RADL3", "title": 1.4943040285688407, "to": "BBAS3"}, {"from": "RADL3", "title": 1.4948964520346775, "to": "B3SA3"}, {"from": "RADL3", "title": 1.4956386836082567, "to": "ITUB4"}, {"from": "RADL3", "title": 1.4963447743684741, "to": "PETR3"}, {"from": "RADL3", "title": 1.497222043250593, "to": "PETR4"}, {"from": "RADL3", "title": 1.4981138924815476, "to": "BBDC4"}, {"from": "RADL3", "title": 1.498489801933097, "to": "YDUQ3"}, {"from": "RADL3", "title": 1.498538916580538, "to": "WEGE3"}, {"from": "RADL3", "title": 1.5019761184162719, "to": "BRKM5"}, {"from": "RADL3", "title": 1.5588244676053071, "to": "CSAN3"}, {"from": "RADL3", "title": 1.5633461813775522, "to": "SBSP3"}, {"from": "RADL3", "title": 1.5195870748146865, "to": "EQTL3"}, {"from": "RADL3", "title": 1.6215010666022371, "to": "ABEV3"}, {"from": "RADL3", "title": 1.5248046116952028, "to": "GGBR4"}, {"from": "RADL3", "title": 1.590183283600225, "to": "MRFG3"}, {"from": "AMER3", "title": 1.5121313939033745, "to": "KLBN11"}, {"from": "AMER3", "title": 0.8977888888996121, "to": "YDUQ3"}, {"from": "AMER3", "title": 0.9245677666080977, "to": "BRKM5"}, {"from": "CIEL3", "title": 1.5335161464109446, "to": "KLBN11"}, {"from": "CIEL3", "title": 1.5464149524118798, "to": "JBSS3"}, {"from": "CIEL3", "title": 1.2330561980302237, "to": "ELET3"}, {"from": "CIEL3", "title": 1.2164993161866664, "to": "ELET6"}, {"from": "CIEL3", "title": 1.6842366227916068, "to": "CSAN3"}, {"from": "CIEL3", "title": 1.2058257780669797, "to": "ENBR3"}, {"from": "CIEL3", "title": 1.6763214473699257, "to": "SBSP3"}, {"from": "CIEL3", "title": 0.9145767314014708, "to": "EQTL3"}, {"from": "CIEL3", "title": 1.6036293552221388, "to": "ABEV3"}, {"from": "CIEL3", "title": 0.9451526060840282, "to": "GGBR4"}, {"from": "CIEL3", "title": 1.1851072736746056, "to": "HYPE3"}, {"from": "CIEL3", "title": 1.1466276151250794, "to": "TOTS3"}, {"from": "CIEL3", "title": 1.105634315253992, "to": "MULT3"}, {"from": "BRFS3", "title": 1.5367164859090399, "to": "KLBN11"}, {"from": "BRFS3", "title": 1.8346605674001548, "to": "CSNA3"}, {"from": "BRFS3", "title": 1.642982084147057, "to": "MRFG3"}, {"from": "RAIL3", "title": 1.528723359565317, "to": "KLBN11"}, {"from": "RAIL3", "title": 0.7676705568877571, "to": "BBDC4"}, {"from": "RAIL3", "title": 0.7724203094227212, "to": "WEGE3"}, {"from": "RENT3", "title": 1.5311738329084128, "to": "KLBN11"}, {"from": "RENT3", "title": 0.7361996912730385, "to": "PETR4"}, {"from": "RENT3", "title": 0.7513639151021951, "to": "YDUQ3"}, {"from": "OIBR3", "title": 1.5566423288510445, "to": "KLBN11"}, {"from": "OIBR3", "title": 0.5558075177893881, "to": "BRKM5"}, {"from": "OIBR3", "title": 1.7339752264568418, "to": "CSAN3"}, {"from": "CVCB3", "title": 1.534406153801466, "to": "KLBN11"}, {"from": "CVCB3", "title": 0.6953946613672078, "to": "PETR3"}, {"from": "CVCB3", "title": 0.718645089662805, "to": "BBDC4"}, {"from": "ARZZ3", "title": 1.5434257666982303, "to": "KLBN11"}, {"from": "ARZZ3", "title": 0.5917851005287093, "to": "ITUB4"}, {"from": "ARZZ3", "title": 0.6185134825266367, "to": "PETR4"}, {"from": "KLBN11", "title": 1.577484031571631, "to": "CCRO3"}, {"from": "KLBN11", "title": 1.5463905100079056, "to": "USIM5"}, {"from": "KLBN11", "title": 1.5470218576247858, "to": "LREN3"}, {"from": "KLBN11", "title": 1.5478969127393338, "to": "VALE3"}, {"from": "KLBN11", "title": 1.5903732217394226, "to": "CSNA3"}, {"from": "KLBN11", "title": 1.559595981200375, "to": "NTCO3"}, {"from": "KLBN11", "title": 1.5621276776543664, "to": "CMIG4"}, {"from": "KLBN11", "title": 1.5638588910214075, "to": "ITSA4"}, {"from": "KLBN11", "title": 1.5669984087220485, "to": "BBAS3"}, {"from": "KLBN11", "title": 1.5681028848678982, "to": "B3SA3"}, {"from": "KLBN11", "title": 1.569486173774123, "to": "ITUB4"}, {"from": "KLBN11", "title": 1.5708016133027132, "to": "PETR3"}, {"from": "KLBN11", "title": 1.572435286517207, "to": "PETR4"}, {"from": "KLBN11", "title": 1.5740953535907645, "to": "BBDC4"}, {"from": "KLBN11", "title": 1.5747948341719256, "to": "YDUQ3"}, {"from": "KLBN11", "title": 1.5748862151873892, "to": "WEGE3"}, {"from": "KLBN11", "title": 1.5812756463645685, "to": "BRKM5"}, {"from": "KLBN11", "title": 0.9787946854031361, "to": "ELET6"}, {"from": "KLBN11", "title": 1.6854267658100983, "to": "CSAN3"}, {"from": "KLBN11", "title": 1.741766578977683, "to": "MRFG3"}, {"from": "CCRO3", "title": 1.9610488922680163, "to": "CSNA3"}, {"from": "CCRO3", "title": 1.9915995341471995, "to": "WEGE3"}, {"from": "USIM5", "title": 0.5428517765840365, "to": "B3SA3"}, {"from": "USIM5", "title": 0.5706080656698823, "to": "PETR3"}, {"from": "LREN3", "title": 0.5226360962343447, "to": "BBAS3"}, {"from": "LREN3", "title": 0.549756961900074, "to": "ITUB4"}, {"from": "VALE3", "title": 0.4721303268212523, "to": "ITSA4"}, {"from": "VALE3", "title": 0.5238084225871422, "to": "B3SA3"}, {"from": "JBSS3", "title": 0.6712330744787862, "to": "ELET3"}, {"from": "JBSS3", "title": 1.8355983833646716, "to": "ABEV3"}, {"from": "NTCO3", "title": 0.19120776356154734, "to": "CMIG4"}, {"from": "NTCO3", "title": 0.3187874991691675, "to": "BBAS3"}, {"from": "ELET3", "title": 0.8754933759698368, "to": "MULT3"}, {"from": "ELET6", "title": 0.6942025548793848, "to": "TOTS3"}, {"from": "CSAN3", "title": 0.8034357896298494, "to": "GGBR4"}, {"from": "ENBR3", "title": 0.7717969131503689, "to": "MULT3"}, {"from": "SBSP3", "title": 0.9342223535958724, "to": "EQTL3"}, {"from": "SBSP3", "title": 1.8469790408578026, "to": "ABEV3"}, {"from": "HYPE3", "title": 0.5117374667282174, "to": "TOTS3"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

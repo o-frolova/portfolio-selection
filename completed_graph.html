@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 1300px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "ABEV3", "label": "ABEV3", "shape": "dot", "title": "ABEV3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "AMER3", "label": "AMER3", "shape": "dot", "title": "AMER3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ARZZ3", "label": "ARZZ3", "shape": "dot", "title": "ARZZ3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "B3SA3", "label": "B3SA3", "shape": "dot", "title": "B3SA3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BBAS3", "label": "BBAS3", "shape": "dot", "title": "BBAS3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BBDC4", "label": "BBDC4", "shape": "dot", "title": "BBDC4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BRFS3", "label": "BRFS3", "shape": "dot", "title": "BRFS3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BRKM5", "label": "BRKM5", "shape": "dot", "title": "BRKM5"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CCRO3", "label": "CCRO3", "shape": "dot", "title": "CCRO3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CIEL3", "label": "CIEL3", "shape": "dot", "title": "CIEL3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CMIG4", "label": "CMIG4", "shape": "dot", "title": "CMIG4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CSAN3", "label": "CSAN3", "shape": "dot", "title": "CSAN3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CSNA3", "label": "CSNA3", "shape": "dot", "title": "CSNA3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "CVCB3", "label": "CVCB3", "shape": "dot", "title": "CVCB3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ELET3", "label": "ELET3", "shape": "dot", "title": "ELET3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ELET6", "label": "ELET6", "shape": "dot", "title": "ELET6"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ENBR3", "label": "ENBR3", "shape": "dot", "title": "ENBR3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "EQTL3", "label": "EQTL3", "shape": "dot", "title": "EQTL3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "GGBR4", "label": "GGBR4", "shape": "dot", "title": "GGBR4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "HYPE3", "label": "HYPE3", "shape": "dot", "title": "HYPE3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ITSA4", "label": "ITSA4", "shape": "dot", "title": "ITSA4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ITUB4", "label": "ITUB4", "shape": "dot", "title": "ITUB4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "JBSS3", "label": "JBSS3", "shape": "dot", "title": "JBSS3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "KLBN11", "label": "KLBN11", "shape": "dot", "title": "KLBN11"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "LREN3", "label": "LREN3", "shape": "dot", "title": "LREN3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MGLU3", "label": "MGLU3", "shape": "dot", "title": "MGLU3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MRFG3", "label": "MRFG3", "shape": "dot", "title": "MRFG3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MULT3", "label": "MULT3", "shape": "dot", "title": "MULT3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "NTCO3", "label": "NTCO3", "shape": "dot", "title": "NTCO3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "OIBR3", "label": "OIBR3", "shape": "dot", "title": "OIBR3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "PETR3", "label": "PETR3", "shape": "dot", "title": "PETR3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "PETR4", "label": "PETR4", "shape": "dot", "title": "PETR4"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "RADL3", "label": "RADL3", "shape": "dot", "title": "RADL3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "RAIL3", "label": "RAIL3", "shape": "dot", "title": "RAIL3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "RENT3", "label": "RENT3", "shape": "dot", "title": "RENT3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "SBSP3", "label": "SBSP3", "shape": "dot", "title": "SBSP3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "TOTS3", "label": "TOTS3", "shape": "dot", "title": "TOTS3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "USIM5", "label": "USIM5", "shape": "dot", "title": "USIM5"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "VALE3", "label": "VALE3", "shape": "dot", "title": "VALE3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "WEGE3", "label": "WEGE3", "shape": "dot", "title": "WEGE3"}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "YDUQ3", "label": "YDUQ3", "shape": "dot", "title": "YDUQ3"}]);
+                  edges = new vis.DataSet([{"from": "ABEV3", "title": 2.5667305323311953, "to": "AMER3"}, {"from": "ABEV3", "title": 2.1069550588505037, "to": "ARZZ3"}, {"from": "ABEV3", "title": 1.8335611386796564, "to": "B3SA3"}, {"from": "ABEV3", "title": 1.8446432216393918, "to": "BBAS3"}, {"from": "ABEV3", "title": 1.7750008562745199, "to": "BBDC4"}, {"from": "ABEV3", "title": 2.967721240405104, "to": "BRFS3"}, {"from": "ABEV3", "title": 1.708051388712284, "to": "BRKM5"}, {"from": "ABEV3", "title": 2.6529255124867537, "to": "CCRO3"}, {"from": "ABEV3", "title": 2.999594766017041, "to": "CIEL3"}, {"from": "ABEV3", "title": 1.8946634116876473, "to": "CMIG4"}, {"from": "ABEV3", "title": 2.219745132542126, "to": "CSAN3"}, {"from": "ABEV3", "title": 2.578635908620755, "to": "CSNA3"}, {"from": "ABEV3", "title": 2.22343346168741, "to": "CVCB3"}, {"from": "ABEV3", "title": 0.5675205141602702, "to": "ELET3"}, {"from": "ABEV3", "title": 0.42447536044475187, "to": "ELET6"}, {"from": "ABEV3", "title": 0.29953135711652973, "to": "ENBR3"}, {"from": "ABEV3", "title": 1.4390998834640738, "to": "EQTL3"}, {"from": "ABEV3", "title": 1.3682315663344142, "to": "GGBR4"}, {"from": "ABEV3", "title": 0.2891343939291328, "to": "HYPE3"}, {"from": "ABEV3", "title": 1.876664871429534, "to": "ITSA4"}, {"from": "ABEV3", "title": 1.8198116208381816, "to": "ITUB4"}, {"from": "ABEV3", "title": 1.8355983833646716, "to": "JBSS3"}, {"from": "ABEV3", "title": 1.7973379482940424, "to": "KLBN11"}, {"from": "ABEV3", "title": 2.06332105766033, "to": "LREN3"}, {"from": "ABEV3", "title": 3.2383092616880416, "to": "MGLU3"}, {"from": "ABEV3", "title": 2.0929652331318422, "to": "MRFG3"}, {"from": "ABEV3", "title": 0.8488577209335254, "to": "MULT3"}, {"from": "ABEV3", "title": 1.921439878343997, "to": "NTCO3"}, {"from": "ABEV3", "title": 2.7956654637514946, "to": "OIBR3"}, {"from": "ABEV3", "title": 1.8068678530593452, "to": "PETR3"}, {"from": "ABEV3", "title": 1.7909666359611016, "to": "PETR4"}, {"from": "ABEV3", "title": 1.6215010666022371, "to": "RADL3"}, {"from": "ABEV3", "title": 2.302677520666625, "to": "RAIL3"}, {"from": "ABEV3", "title": 2.267902629070996, "to": "RENT3"}, {"from": "ABEV3", "title": 2.198682074555274, "to": "SBSP3"}, {"from": "ABEV3", "title": 0.6304957535616115, "to": "TOTS3"}, {"from": "ABEV3", "title": 2.070874863267056, "to": "USIM5"}, {"from": "ABEV3", "title": 2.052924456951317, "to": "VALE3"}, {"from": "ABEV3", "title": 1.7674613450476053, "to": "WEGE3"}, {"from": "ABEV3", "title": 1.7683303378237223, "to": "YDUQ3"}, {"from": "AMER3", "title": 0.7074063532891958, "to": "ARZZ3"}, {"from": "AMER3", "title": 0.8667806446746286, "to": "B3SA3"}, {"from": "AMER3", "title": 0.8612873988885834, "to": "BBAS3"}, {"from": "AMER3", "title": 0.8947181486154102, "to": "BBDC4"}, {"from": "AMER3", "title": 1.8934893006936933, "to": "BRFS3"}, {"from": "AMER3", "title": 0.9245677666080977, "to": "BRKM5"}, {"from": "AMER3", "title": 1.7813629048527209, "to": "CCRO3"}, {"from": "AMER3", "title": 1.9051497084120046, "to": "CIEL3"}, {"from": "AMER3", "title": 0.8356182577150946, "to": "CMIG4"}, {"from": "AMER3", "title": 1.6375905917408229, "to": "CSAN3"}, {"from": "AMER3", "title": 1.7557746872295952, "to": "CSNA3"}, {"from": "AMER3", "title": 0.6188373946173906, "to": "CVCB3"}, {"from": "AMER3", "title": 1.2685604039869949, "to": "ELET3"}, {"from": "AMER3", "title": 1.255467939463125, "to": "ELET6"}, {"from": "AMER3", "title": 1.2470498515374338, "to": "ENBR3"}, {"from": "AMER3", "title": 1.0256425383322942, "to": "EQTL3"}, {"from": "AMER3", "title": 1.0479858477615305, "to": "GGBR4"}, {"from": "AMER3", "title": 1.2307603581849642, "to": "HYPE3"}, {"from": "AMER3", "title": 0.8450239114016653, "to": "ITSA4"}, {"from": "AMER3", "title": 0.8735025770722432, "to": "ITUB4"}, {"from": "AMER3", "title": 1.5227971546775596, "to": "JBSS3"}, {"from": "AMER3", "title": 1.5121313939033745, "to": "KLBN11"}, {"from": "AMER3", "title": 0.7367496138033671, "to": "LREN3"}, {"from": "AMER3", "title": 0.9528342860158705, "to": "MGLU3"}, {"from": "AMER3", "title": 1.5982403421363447, "to": "MRFG3"}, {"from": "AMER3", "title": 1.1689463197054308, "to": "MULT3"}, {"from": "AMER3", "title": 0.8212562087632959, "to": "NTCO3"}, {"from": "AMER3", "title": 1.8314945028272578, "to": "OIBR3"}, {"from": "AMER3", "title": 0.8797379295620253, "to": "PETR3"}, {"from": "AMER3", "title": 0.8872777977077464, "to": "PETR4"}, {"from": "AMER3", "title": 1.4651087133938976, "to": "RADL3"}, {"from": "AMER3", "title": 0.5472048735322482, "to": "RAIL3"}, {"from": "AMER3", "title": 0.5800409381822652, "to": "RENT3"}, {"from": "AMER3", "title": 1.6309597820467292, "to": "SBSP3"}, {"from": "AMER3", "title": 1.2006930726415472, "to": "TOTS3"}, {"from": "AMER3", "title": 0.7317973744163442, "to": "USIM5"}, {"from": "AMER3", "title": 0.7434824098401362, "to": "VALE3"}, {"from": "AMER3", "title": 0.8981873031642543, "to": "WEGE3"}, {"from": "AMER3", "title": 0.8977888888996121, "to": "YDUQ3"}, {"from": "ARZZ3", "title": 0.5784529161010513, "to": "B3SA3"}, {"from": "ARZZ3", "title": 0.5674039679960002, "to": "BBAS3"}, {"from": "ARZZ3", "title": 0.6326469450697103, "to": "BBDC4"}, {"from": "ARZZ3", "title": 2.028381852522248, "to": "BRFS3"}, {"from": "ARZZ3", "title": 0.6875094693796846, "to": "BRKM5"}, {"from": "ARZZ3", "title": 1.8880626174662465, "to": "CCRO3"}, {"from": "ARZZ3", "title": 2.0428920352654534, "to": "CIEL3"}, {"from": "ARZZ3", "title": 0.5136665944764474, "to": "CMIG4"}, {"from": "ARZZ3", "title": 1.7056359834606656, "to": "CSAN3"}, {"from": "ARZZ3", "title": 1.8558199313457766, "to": "CSNA3"}, {"from": "ARZZ3", "title": 0.3958067214487621, "to": "CVCB3"}, {"from": "ARZZ3", "title": 1.2160784402162943, "to": "ELET3"}, {"from": "ARZZ3", "title": 1.1978202369257946, "to": "ELET6"}, {"from": "ARZZ3", "title": 1.1860340761075532, "to": "ENBR3"}, {"from": "ARZZ3", "title": 0.8576516117726571, "to": "EQTL3"}, {"from": "ARZZ3", "title": 0.8929498145081705, "to": "GGBR4"}, {"from": "ARZZ3", "title": 1.163118763668207, "to": "HYPE3"}, {"from": "ARZZ3", "title": 0.5337940087112161, "to": "ITSA4"}, {"from": "ARZZ3", "title": 0.5917851005287093, "to": "ITUB4"}, {"from": "ARZZ3", "title": 1.5573487264694494, "to": "JBSS3"}, {"from": "ARZZ3", "title": 1.5434257666982303, "to": "KLBN11"}, {"from": "ARZZ3", "title": 0.23773435987812946, "to": "LREN3"}, {"from": "ARZZ3", "title": 1.3705059338269725, "to": "MGLU3"}, {"from": "ARZZ3", "title": 1.6551047681403208, "to": "MRFG3"}, {"from": "ARZZ3", "title": 1.0747132742363628, "to": "MULT3"}, {"from": "ARZZ3", "title": 0.48178444867106845, "to": "NTCO3"}, {"from": "ARZZ3", "title": 1.9509843091556036, "to": "OIBR3"}, {"from": "ARZZ3", "title": 0.6039783281295026, "to": "PETR3"}, {"from": "ARZZ3", "title": 0.6185134825266367, "to": "PETR4"}, {"from": "ARZZ3", "title": 1.481703952518687, "to": "RADL3"}, {"from": "ARZZ3", "title": 0.5177481636999199, "to": "RAIL3"}, {"from": "ARZZ3", "title": 0.4676502894893784, "to": "RENT3"}, {"from": "ARZZ3", "title": 1.697141251705735, "to": "SBSP3"}, {"from": "ARZZ3", "title": 1.1204202072739924, "to": "TOTS3"}, {"from": "ARZZ3", "title": 0.21637488480467038, "to": "USIM5"}, {"from": "ARZZ3", "title": 0.2642149022100134, "to": "VALE3"}, {"from": "ARZZ3", "title": 0.6391695044210767, "to": "WEGE3"}, {"from": "ARZZ3", "title": 0.6384225317716405, "to": "YDUQ3"}, {"from": "B3SA3", "title": 0.12330548268448208, "to": "BBAS3"}, {"from": "B3SA3", "title": 0.2807517217598861, "to": "BBDC4"}, {"from": "B3SA3", "title": 2.1305260199446816, "to": "BRFS3"}, {"from": "B3SA3", "title": 0.40718616776598154, "to": "BRKM5"}, {"from": "B3SA3", "title": 1.9695617473048328, "to": "CCRO3"}, {"from": "B3SA3", "title": 2.147110915616445, "to": "CIEL3"}, {"from": "B3SA3", "title": 0.29149658811157203, "to": "CMIG4"}, {"from": "B3SA3", "title": 1.758370792400239, "to": "CSAN3"}, {"from": "B3SA3", "title": 1.9324096951371252, "to": "CSNA3"}, {"from": "B3SA3", "title": 0.7680989641222826, "to": "CVCB3"}, {"from": "B3SA3", "title": 1.1722361331111697, "to": "ELET3"}, {"from": "B3SA3", "title": 1.1494385306535346, "to": "ELET6"}, {"from": "B3SA3", "title": 1.134666182784391, "to": "ENBR3"}, {"from": "B3SA3", "title": 0.6939152785790723, "to": "EQTL3"}, {"from": "B3SA3", "title": 0.7454708977298896, "to": "GGBR4"}, {"from": "B3SA3", "title": 1.1058119312153771, "to": "HYPE3"}, {"from": "B3SA3", "title": 0.24423695972198045, "to": "ITSA4"}, {"from": "B3SA3", "title": 0.13688141601353696, "to": "ITUB4"}, {"from": "B3SA3", "title": 1.5845480909767606, "to": "JBSS3"}, {"from": "B3SA3", "title": 1.5681028848678982, "to": "KLBN11"}, {"from": "B3SA3", "title": 0.5778957957998543, "to": "LREN3"}, {"from": "B3SA3", "title": 1.6301856495630964, "to": "MGLU3"}, {"from": "B3SA3", "title": 1.699389631042821, "to": "MRFG3"}, {"from": "B3SA3", "title": 0.9925897388855104, "to": "MULT3"}, {"from": "B3SA3", "title": 0.3508332131735523, "to": "NTCO3"}, {"from": "B3SA3", "title": 2.041878177840186, "to": "OIBR3"}, {"from": "B3SA3", "title": 0.19038426890776228, "to": "PETR3"}, {"from": "B3SA3", "title": 0.23996961452929205, "to": "PETR4"}, {"from": "B3SA3", "title": 1.4948964520346775, "to": "RADL3"}, {"from": "B3SA3", "title": 0.8507400060698989, "to": "RAIL3"}, {"from": "B3SA3", "title": 0.8151524909094413, "to": "RENT3"}, {"from": "B3SA3", "title": 1.748472042570195, "to": "SBSP3"}, {"from": "B3SA3", "title": 1.0515350247749078, "to": "TOTS3"}, {"from": "B3SA3", "title": 0.5878876593423387, "to": "USIM5"}, {"from": "B3SA3", "title": 0.5639158433919148, "to": "VALE3"}, {"from": "B3SA3", "title": 0.2979660131066483, "to": "WEGE3"}, {"from": "B3SA3", "title": 0.29603661435376993, "to": "YDUQ3"}, {"from": "BBAS3", "title": 0.3054772806608921, "to": "BBDC4"}, {"from": "BBAS3", "title": 2.1260253759226155, "to": "BRFS3"}, {"from": "BBAS3", "title": 0.42383862318491355, "to": "BRKM5"}, {"from": "BBAS3", "title": 1.9659591945207149, "to": "CCRO3"}, {"from": "BBAS3", "title": 2.1425201992852583, "to": "CIEL3"}, {"from": "BBAS3", "title": 0.26313428248058063, "to": "CMIG4"}, {"from": "BBAS3", "title": 1.7560267530643534, "to": "CSAN3"}, {"from": "BBAS3", "title": 1.9290212658679022, "to": "CSNA3"}, {"from": "BBAS3", "title": 0.7552716456672173, "to": "CVCB3"}, {"from": "BBAS3", "title": 1.174248498721503, "to": "ELET3"}, {"from": "BBAS3", "title": 1.1516641240783172, "to": "ELET6"}, {"from": "BBAS3", "title": 1.1370326458150153, "to": "ENBR3"}, {"from": "BBAS3", "title": 0.7021217845135942, "to": "EQTL3"}, {"from": "BBAS3", "title": 0.7527440205917263, "to": "GGBR4"}, {"from": "BBAS3", "title": 1.1084600431822804, "to": "HYPE3"}, {"from": "BBAS3", "title": 0.2100288191511839, "to": "ITSA4"}, {"from": "BBAS3", "title": 0.1835338906771223, "to": "ITUB4"}, {"from": "BBAS3", "title": 1.5833315641977788, "to": "JBSS3"}, {"from": "BBAS3", "title": 1.5669984087220485, "to": "KLBN11"}, {"from": "BBAS3", "title": 0.5624538600864166, "to": "LREN3"}, {"from": "BBAS3", "title": 1.6193719369839912, "to": "MGLU3"}, {"from": "BBAS3", "title": 1.6974174300703708, "to": "MRFG3"}, {"from": "BBAS3", "title": 0.9964389382256797, "to": "MULT3"}, {"from": "BBAS3", "title": 0.3272090683801921, "to": "NTCO3"}, {"from": "BBAS3", "title": 2.03786650387818, "to": "OIBR3"}, {"from": "BBAS3", "title": 0.22596953478318965, "to": "PETR3"}, {"from": "BBAS3", "title": 0.2687758863945108, "to": "PETR4"}, {"from": "BBAS3", "title": 1.4943040285688407, "to": "RADL3"}, {"from": "BBAS3", "title": 0.8385752442065358, "to": "RAIL3"}, {"from": "BBAS3", "title": 0.8027270749723703, "to": "RENT3"}, {"from": "BBAS3", "title": 1.7461897095383372, "to": "SBSP3"}, {"from": "BBAS3", "title": 1.0547383542992848, "to": "TOTS3"}, {"from": "BBAS3", "title": 0.5726384634957332, "to": "USIM5"}, {"from": "BBAS3", "title": 0.5481900267711076, "to": "VALE3"}, {"from": "BBAS3", "title": 0.32125289433878695, "to": "WEGE3"}, {"from": "BBAS3", "title": 0.31947770032570727, "to": "YDUQ3"}, {"from": "BBDC4", "title": 2.154835547247914, "to": "BRFS3"}, {"from": "BBDC4", "title": 0.3009112758617456, "to": "BRKM5"}, {"from": "BBDC4", "title": 1.9890378672905762, "to": "CCRO3"}, {"from": "BBDC4", "title": 2.1719049412016522, "to": "CIEL3"}, {"from": "BBDC4", "title": 0.41293073291084964, "to": "CMIG4"}, {"from": "BBDC4", "title": 1.7710631460329869, "to": "CSAN3"}, {"from": "BBDC4", "title": 1.9507326212494682, "to": "CSNA3"}, {"from": "BBDC4", "title": 0.8344080365676202, "to": "CVCB3"}, {"from": "BBDC4", "title": 1.1612320424989844, "to": "ELET3"}, {"from": "BBDC4", "title": 1.137259733418498, "to": "ELET6"}, {"from": "BBDC4", "title": 1.121710199709995, "to": "ENBR3"}, {"from": "BBDC4", "title": 0.6474709341477864, "to": "EQTL3"}, {"from": "BBDC4", "title": 0.7046074493947619, "to": "GGBR4"}, {"from": "BBDC4", "title": 1.0912992817459004, "to": "HYPE3"}, {"from": "BBDC4", "title": 0.37967678257858617, "to": "ITSA4"}, {"from": "BBDC4", "title": 0.25010029333431666, "to": "ITUB4"}, {"from": "BBDC4", "title": 1.5911471644978814, "to": "JBSS3"}, {"from": "BBDC4", "title": 1.5740953535907645, "to": "KLBN11"}, {"from": "BBDC4", "title": 0.6555308547277849, "to": "LREN3"}, {"from": "BBDC4", "title": 1.6877772272854605, "to": "MGLU3"}, {"from": "BBDC4", "title": 1.7100744549007472, "to": "MRFG3"}, {"from": "BBDC4", "title": 0.9713912153096327, "to": "MULT3"}, {"from": "BBDC4", "title": 0.45846394559395953, "to": "NTCO3"}, {"from": "BBDC4", "title": 2.0635567602479017, "to": "OIBR3"}, {"from": "BBDC4", "title": 0.2105282128216426, "to": "PETR3"}, {"from": "BBDC4", "title": 0.1486855144619751, "to": "PETR4"}, {"from": "BBDC4", "title": 1.4981138924815476, "to": "RADL3"}, {"from": "BBDC4", "title": 0.9140613219530827, "to": "RAIL3"}, {"from": "BBDC4", "title": 0.8796537954189092, "to": "RENT3"}, {"from": "BBDC4", "title": 1.760831365601879, "to": "SBSP3"}, {"from": "BBDC4", "title": 1.0339419235877807, "to": "TOTS3"}, {"from": "BBDC4", "title": 0.664715695355774, "to": "USIM5"}, {"from": "BBDC4", "title": 0.6427311456872002, "to": "VALE3"}, {"from": "BBDC4", "title": 0.10183782434928002, "to": "WEGE3"}, {"from": "BBDC4", "title": 0.09580111696216267, "to": "YDUQ3"}, {"from": "BRFS3", "title": 0.7451576735629614, "to": "BRKM5"}, {"from": "BRFS3", "title": 1.8655199433820175, "to": "CCRO3"}, {"from": "BRFS3", "title": 2.013921657013733, "to": "CIEL3"}, {"from": "BRFS3", "title": 0.5981102040451877, "to": "CMIG4"}, {"from": "BRFS3", "title": 1.691162106578161, "to": "CSAN3"}, {"from": "BRFS3", "title": 1.8346605674001548, "to": "CSNA3"}, {"from": "BRFS3", "title": 0.2001025174374238, "to": "CVCB3"}, {"from": "BRFS3", "title": 1.227610780601234, "to": "ELET3"}, {"from": "BRFS3", "title": 1.2105114852333, "to": "ELET6"}, {"from": "BRFS3", "title": 1.1994835923940514, "to": "ENBR3"}, {"from": "BRFS3", "title": 0.8966274426956995, "to": "EQTL3"}, {"from": "BRFS3", "title": 0.9286508400629506, "to": "GGBR4"}, {"from": "BRFS3", "title": 1.1780663263054345, "to": "HYPE3"}, {"from": "BRFS3", "title": 0.6145554818099214, "to": "ITSA4"}, {"from": "BRFS3", "title": 0.6628893738350315, "to": "ITUB4"}, {"from": "BRFS3", "title": 1.5499467684585233, "to": "JBSS3"}, {"from": "BRFS3", "title": 1.5367164859090399, "to": "KLBN11"}, {"from": "BRFS3", "title": 0.4020096889291776, "to": "LREN3"}, {"from": "BRFS3", "title": 1.2917304143934212, "to": "MGLU3"}, {"from": "BRFS3", "title": 1.642982084147057, "to": "MRFG3"}, {"from": "BRFS3", "title": 1.0957653420471563, "to": "MULT3"}, {"from": "BRFS3", "title": 0.5724638776255309, "to": "NTCO3"}, {"from": "BRFS3", "title": 1.9257885713517808, "to": "OIBR3"}, {"from": "BRFS3", "title": 0.6732117867087144, "to": "PETR3"}, {"from": "BRFS3", "title": 0.6855817597227095, "to": "PETR4"}, {"from": "BRFS3", "title": 1.4781332119204214, "to": "RADL3"}, {"from": "BRFS3", "title": 0.38133611367379777, "to": "RAIL3"}, {"from": "BRFS3", "title": 0.3141979617755788, "to": "RENT3"}, {"from": "BRFS3", "title": 1.6830587247046915, "to": "SBSP3"}, {"from": "BRFS3", "title": 1.1382482103548157, "to": "TOTS3"}, {"from": "BRFS3", "title": 0.3904315036355155, "to": "USIM5"}, {"from": "BRFS3", "title": 0.41735466616463923, "to": "VALE3"}, {"from": "BRFS3", "title": 0.7032753885624684, "to": "WEGE3"}, {"from": "BRFS3", "title": 0.7026332978295476, "to": "YDUQ3"}, {"from": "BRKM5", "title": 2.0122225112859677, "to": "CCRO3"}, {"from": "BRKM5", "title": 2.2013680440593073, "to": "CIEL3"}, {"from": "BRKM5", "title": 0.5229139590348522, "to": "CMIG4"}, {"from": "BRKM5", "title": 1.7862155852785087, "to": "CSAN3"}, {"from": "BRKM5", "title": 1.9725539569822512, "to": "CSNA3"}, {"from": "BRKM5", "title": 0.9077963668843811, "to": "CVCB3"}, {"from": "BRKM5", "title": 1.147851627111561, "to": "ELET3"}, {"from": "BRKM5", "title": 1.1224305385629574, "to": "ELET6"}, {"from": "BRKM5", "title": 1.1059198380288287, "to": "ENBR3"}, {"from": "BRKM5", "title": 0.5867340357774968, "to": "EQTL3"}, {"from": "BRKM5", "title": 0.652053119427686, "to": "GGBR4"}, {"from": "BRKM5", "title": 1.073577030734452, "to": "HYPE3"}, {"from": "BRKM5", "title": 0.49581427384974713, "to": "ITSA4"}, {"from": "BRKM5", "title": 0.4004469470193618, "to": "ITUB4"}, {"from": "BRKM5", "title": 1.599051353274073, "to": "JBSS3"}, {"from": "BRKM5", "title": 1.5812756463645685, "to": "KLBN11"}, {"from": "BRKM5", "title": 0.7382003735204401, "to": "LREN3"}, {"from": "BRKM5", "title": 1.7545699361859022, "to": "MGLU3"}, {"from": "BRKM5", "title": 1.7228430567483681, "to": "MRFG3"}, {"from": "BRKM5", "title": 0.9452543009648465, "to": "MULT3"}, {"from": "BRKM5", "title": 0.5612467713700635, "to": "NTCO3"}, {"from": "BRKM5", "title": 2.0893432250936583, "to": "OIBR3"}, {"from": "BRKM5", "title": 0.3758528208363955, "to": "PETR3"}, {"from": "BRKM5", "title": 0.34350714348765604, "to": "PETR4"}, {"from": "BRKM5", "title": 1.5019761184162719, "to": "RADL3"}, {"from": "BRKM5", "title": 0.9848705084183265, "to": "RAIL3"}, {"from": "BRKM5", "title": 0.9514861740529916, "to": "RENT3"}, {"from": "BRKM5", "title": 1.7755886006109172, "to": "SBSP3"}, {"from": "BRKM5", "title": 1.0123679762247817, "to": "TOTS3"}, {"from": "BRKM5", "title": 0.7467536951668419, "to": "USIM5"}, {"from": "BRKM5", "title": 0.7263156392211647, "to": "VALE3"}, {"from": "BRKM5", "title": 0.28979076522412267, "to": "WEGE3"}, {"from": "BRKM5", "title": 0.2919389545305998, "to": "YDUQ3"}, {"from": "CCRO3", "title": 2.185842572598419, "to": "CIEL3"}, {"from": "CCRO3", "title": 0.4680053881825786, "to": "CMIG4"}, {"from": "CCRO3", "title": 1.7782217042456159, "to": "CSAN3"}, {"from": "CCRO3", "title": 1.9610488922680163, "to": "CSNA3"}, {"from": "CCRO3", "title": 0.8697732506230503, "to": "CVCB3"}, {"from": "CCRO3", "title": 1.1549441712881423, "to": "ELET3"}, {"from": "CCRO3", "title": 1.1302938709680241, "to": "ELET6"}, {"from": "CCRO3", "title": 1.1142949066196015, "to": "ENBR3"}, {"from": "CCRO3", "title": 0.6195833660947855, "to": "EQTL3"}, {"from": "CCRO3", "title": 0.6803406683967921, "to": "GGBR4"}, {"from": "CCRO3", "title": 1.082981600100452, "to": "HYPE3"}, {"from": "CCRO3", "title": 0.4382722320506005, "to": "ITSA4"}, {"from": "CCRO3", "title": 0.32962729454758666, "to": "ITUB4"}, {"from": "CCRO3", "title": 1.594877877125327, "to": "JBSS3"}, {"from": "CCRO3", "title": 1.577484031571631, "to": "KLBN11"}, {"from": "CCRO3", "title": 0.6957241033418523, "to": "LREN3"}, {"from": "CCRO3", "title": 1.7195848642824556, "to": "MGLU3"}, {"from": "CCRO3", "title": 1.7161050832522953, "to": "MRFG3"}, {"from": "CCRO3", "title": 0.9591596841813705, "to": "MULT3"}, {"from": "CCRO3", "title": 0.5095030401297879, "to": "NTCO3"}, {"from": "CCRO3", "title": 2.075751750350138, "to": "OIBR3"}, {"from": "CCRO3", "title": 0.3000311242432327, "to": "PETR3"}, {"from": "CCRO3", "title": 0.2594366302683584, "to": "PETR4"}, {"from": "CCRO3", "title": 1.4999356858609618, "to": "RADL3"}, {"from": "CCRO3", "title": 0.9480980728186842, "to": "RAIL3"}, {"from": "CCRO3", "title": 0.9142172028388061, "to": "RENT3"}, {"from": "CCRO3", "title": 1.7678028963930645, "to": "SBSP3"}, {"from": "CCRO3", "title": 1.0238291582542385, "to": "TOTS3"}, {"from": "CCRO3", "title": 0.7045774188705133, "to": "USIM5"}, {"from": "CCRO3", "title": 0.6834055936349506, "to": "VALE3"}, {"from": "CCRO3", "title": 0.1846701259005943, "to": "WEGE3"}, {"from": "CCRO3", "title": 0.18794364276348108, "to": "YDUQ3"}, {"from": "CIEL3", "title": 0.6343294435535144, "to": "CMIG4"}, {"from": "CIEL3", "title": 1.6842366227916068, "to": "CSAN3"}, {"from": "CIEL3", "title": 1.8245139099716265, "to": "CSNA3"}, {"from": "CIEL3", "title": 0.12413257098105669, "to": "CVCB3"}, {"from": "CIEL3", "title": 1.2330561980302237, "to": "ELET3"}, {"from": "CIEL3", "title": 1.2164993161866664, "to": "ELET6"}, {"from": "CIEL3", "title": 1.2058257780669797, "to": "ENBR3"}, {"from": "CIEL3", "title": 0.9145767314014708, "to": "EQTL3"}, {"from": "CIEL3", "title": 0.9451526060840282, "to": "GGBR4"}, {"from": "CIEL3", "title": 1.1851072736746056, "to": "HYPE3"}, {"from": "CIEL3", "title": 0.649441614664191, "to": "ITSA4"}, {"from": "CIEL3", "title": 0.6941469912878552, "to": "ITUB4"}, {"from": "CIEL3", "title": 1.5464149524118798, "to": "JBSS3"}, {"from": "CIEL3", "title": 1.5335161464109446, "to": "KLBN11"}, {"from": "CIEL3", "title": 0.4599789358325522, "to": "LREN3"}, {"from": "CIEL3", "title": 1.252538592820164, "to": "MGLU3"}, {"from": "CIEL3", "title": 1.6371866592871809, "to": "MRFG3"}, {"from": "CIEL3", "title": 1.105634315253992, "to": "MULT3"}, {"from": "CIEL3", "title": 0.6108755275966637, "to": "NTCO3"}, {"from": "CIEL3", "title": 1.9136924675641094, "to": "OIBR3"}, {"from": "CIEL3", "title": 0.703744955036353, "to": "PETR3"}, {"from": "CIEL3", "title": 0.7152680197840688, "to": "PETR4"}, {"from": "CIEL3", "title": 1.4764324126048072, "to": "RADL3"}, {"from": "CIEL3", "title": 0.2951323616551134, "to": "RAIL3"}, {"from": "CIEL3", "title": 0.20414577158087022, "to": "RENT3"}, {"from": "CIEL3", "title": 1.6763214473699257, "to": "SBSP3"}, {"from": "CIEL3", "title": 1.1466276151250794, "to": "TOTS3"}, {"from": "CIEL3", "title": 0.45017216148429834, "to": "USIM5"}, {"from": "CIEL3", "title": 0.4730877311201913, "to": "VALE3"}, {"from": "CIEL3", "title": 0.731788442480419, "to": "WEGE3"}, {"from": "CIEL3", "title": 0.7311881702210471, "to": "YDUQ3"}, {"from": "CMIG4", "title": 1.745671843346274, "to": "CSAN3"}, {"from": "CMIG4", "title": 1.9140354912391224, "to": "CSNA3"}, {"from": "CMIG4", "title": 0.6960063955369388, "to": "CVCB3"}, {"from": "CMIG4", "title": 1.1830654101685332, "to": "ELET3"}, {"from": "CMIG4", "title": 1.1614095685277022, "to": "ELET6"}, {"from": "CMIG4", "title": 1.1473908188661448, "to": "ENBR3"}, {"from": "CMIG4", "title": 0.7371581668486047, "to": "EQTL3"}, {"from": "CMIG4", "title": 0.7839555723666564, "to": "GGBR4"}, {"from": "CMIG4", "title": 1.120041512530314, "to": "HYPE3"}, {"from": "CMIG4", "title": 0.15584204485466532, "to": "ITSA4"}, {"from": "CMIG4", "title": 0.31540505290058607, "to": "ITUB4"}, {"from": "CMIG4", "title": 1.5779657664357094, "to": "JBSS3"}, {"from": "CMIG4", "title": 1.5621276776543664, "to": "KLBN11"}, {"from": "CMIG4", "title": 0.4887186215856631, "to": "LREN3"}, {"from": "CMIG4", "title": 1.5708897674810733, "to": "MGLU3"}, {"from": "CMIG4", "title": 1.6887092350817279, "to": "MRFG3"}, {"from": "CMIG4", "title": 1.0132077018363015, "to": "MULT3"}, {"from": "CMIG4", "title": 0.19120776356154734, "to": "NTCO3"}, {"from": "CMIG4", "title": 2.0201140682052228, "to": "OIBR3"}, {"from": "CMIG4", "title": 0.3409932729383898, "to": "PETR3"}, {"from": "CMIG4", "title": 0.36979183998802434, "to": "PETR4"}, {"from": "CMIG4", "title": 1.491693628153518, "to": "RADL3"}, {"from": "CMIG4", "title": 0.782786885342677, "to": "RAIL3"}, {"from": "CMIG4", "title": 0.7455779071801981, "to": "RENT3"}, {"from": "CMIG4", "title": 1.736108154099434, "to": "SBSP3"}, {"from": "CMIG4", "title": 1.068723954051643, "to": "TOTS3"}, {"from": "CMIG4", "title": 0.5000195265315182, "to": "USIM5"}, {"from": "CMIG4", "title": 0.4727937696123748, "to": "VALE3"}, {"from": "CMIG4", "title": 0.4082559081294209, "to": "WEGE3"}, {"from": "CMIG4", "title": 0.40690726843727865, "to": "YDUQ3"}, {"from": "CSAN3", "title": 2.2752116727759644, "to": "CSNA3"}, {"from": "CSAN3", "title": 1.6565385496376048, "to": "CVCB3"}, {"from": "CSAN3", "title": 0.9239009897752751, "to": "ELET3"}, {"from": "CSAN3", "title": 0.8698519693238935, "to": "ELET6"}, {"from": "CSAN3", "title": 0.8335689449227234, "to": "ENBR3"}, {"from": "CSAN3", "title": 0.8839900578786365, "to": "EQTL3"}, {"from": "CSAN3", "title": 0.8034357896298494, "to": "GGBR4"}, {"from": "CSAN3", "title": 0.7592240588604844, "to": "HYPE3"}, {"from": "CSAN3", "title": 1.3314324728195404, "to": "ITSA4"}, {"from": "CSAN3", "title": 1.2763725530228631, "to": "ITUB4"}, {"from": "CSAN3", "title": 1.7133682940520762, "to": "JBSS3"}, {"from": "CSAN3", "title": 1.6854267658100983, "to": "KLBN11"}, {"from": "CSAN3", "title": 1.5083686253358763, "to": "LREN3"}, {"from": "CSAN3", "title": 2.5556333604253427, "to": "MGLU3"}, {"from": "CSAN3", "title": 1.9043196461865226, "to": "MRFG3"}, {"from": "CSAN3", "title": 0.375805765657728, "to": "MULT3"}, {"from": "CSAN3", "title": 1.3743735937293124, "to": "NTCO3"}, {"from": "CSAN3", "title": 2.4440737380811988, "to": "OIBR3"}, {"from": "CSAN3", "title": 1.2637460427511604, "to": "PETR3"}, {"from": "CSAN3", "title": 1.2481852674471507, "to": "PETR4"}, {"from": "CSAN3", "title": 1.5588244676053071, "to": "RADL3"}, {"from": "CSAN3", "title": 1.7289223779368292, "to": "RAIL3"}, {"from": "CSAN3", "title": 1.6972268284772423, "to": "RENT3"}, {"from": "CSAN3", "title": 1.9840400002252352, "to": "SBSP3"}, {"from": "CSAN3", "title": 0.601612101755245, "to": "TOTS3"}, {"from": "CSAN3", "title": 1.5154248463711668, "to": "USIM5"}, {"from": "CSAN3", "title": 1.4986450793815884, "to": "VALE3"}, {"from": "CSAN3", "title": 1.225079486813368, "to": "WEGE3"}, {"from": "CSAN3", "title": 1.2259359806209351, "to": "YDUQ3"}, {"from": "CSNA3", "title": 0.993442471936405, "to": "CVCB3"}, {"from": "CSNA3", "title": 1.130581675258708, "to": "ELET3"}, {"from": "CSNA3", "title": 1.1032561893617179, "to": "ELET6"}, {"from": "CSNA3", "title": 1.0854774226193085, "to": "ENBR3"}, {"from": "CSNA3", "title": 0.498787301535698, "to": "EQTL3"}, {"from": "CSNA3", "title": 0.5782480035903391, "to": "GGBR4"}, {"from": "CSNA3", "title": 1.0505740160439434, "to": "HYPE3"}, {"from": "CSNA3", "title": 0.6126366085958167, "to": "ITSA4"}, {"from": "CSNA3", "title": 0.5337801537982229, "to": "ITUB4"}, {"from": "CSNA3", "title": 1.6090615715297065, "to": "JBSS3"}, {"from": "CSNA3", "title": 1.5903732217394226, "to": "KLBN11"}, {"from": "CSNA3", "title": 0.8316716901677454, "to": "LREN3"}, {"from": "CSNA3", "title": 1.83611994410088, "to": "MGLU3"}, {"from": "CSNA3", "title": 1.738968862525744, "to": "MRFG3"}, {"from": "CSNA3", "title": 0.9108823368637738, "to": "MULT3"}, {"from": "CSNA3", "title": 0.6696848443747819, "to": "NTCO3"}, {"from": "CSNA3", "title": 2.121730071332133, "to": "OIBR3"}, {"from": "CSNA3", "title": 0.5145172433255497, "to": "PETR3"}, {"from": "CSNA3", "title": 0.49001856520725634, "to": "PETR4"}, {"from": "CSNA3", "title": 1.5068805495593214, "to": "RADL3"}, {"from": "CSNA3", "title": 1.0682764747581095, "to": "RAIL3"}, {"from": "CSNA3", "title": 1.0357815201765592, "to": "RENT3"}, {"from": "CSNA3", "title": 1.794207056115788, "to": "SBSP3"}, {"from": "CSNA3", "title": 0.9842079292451463, "to": "TOTS3"}, {"from": "CSNA3", "title": 0.8397091343473175, "to": "USIM5"}, {"from": "CSNA3", "title": 0.8205296119788493, "to": "VALE3"}, {"from": "CSNA3", "title": 0.4518166246228729, "to": "WEGE3"}, {"from": "CSNA3", "title": 0.4532769374061091, "to": "YDUQ3"}, {"from": "CVCB3", "title": 1.231545394719666, "to": "ELET3"}, {"from": "CVCB3", "title": 1.2148383277835133, "to": "ELET6"}, {"from": "CVCB3", "title": 1.2040667091201638, "to": "ENBR3"}, {"from": "CVCB3", "title": 0.909624367208681, "to": "EQTL3"}, {"from": "CVCB3", "title": 0.9405960019815973, "to": "GGBR4"}, {"from": "CVCB3", "title": 1.1831548791362492, "to": "HYPE3"}, {"from": "CVCB3", "title": 0.6399380017105711, "to": "ITSA4"}, {"from": "CVCB3", "title": 0.6856038552351456, "to": "ITUB4"}, {"from": "CVCB3", "title": 1.5473972124072233, "to": "JBSS3"}, {"from": "CVCB3", "title": 1.534406153801466, "to": "KLBN11"}, {"from": "CVCB3", "title": 0.44462889681971374, "to": "LREN3"}, {"from": "CVCB3", "title": 1.2635515238515487, "to": "MGLU3"}, {"from": "CVCB3", "title": 1.6387991977467962, "to": "MRFG3"}, {"from": "CVCB3", "title": 1.1029007011318388, "to": "MULT3"}, {"from": "CVCB3", "title": 0.6004479655296137, "to": "NTCO3"}, {"from": "CVCB3", "title": 1.9170614939063233, "to": "OIBR3"}, {"from": "CVCB3", "title": 0.6953946613672078, "to": "PETR3"}, {"from": "CVCB3", "title": 0.7071435992158575, "to": "PETR4"}, {"from": "CVCB3", "title": 1.4769052417567783, "to": "RADL3"}, {"from": "CVCB3", "title": 0.3214155202506833, "to": "RAIL3"}, {"from": "CVCB3", "title": 0.23984913943242248, "to": "RENT3"}, {"from": "CVCB3", "title": 1.6781963732796958, "to": "SBSP3"}, {"from": "CVCB3", "title": 1.1443052310337696, "to": "TOTS3"}, {"from": "CVCB3", "title": 0.43439602708940006, "to": "USIM5"}, {"from": "CVCB3", "title": 0.458280703841183, "to": "VALE3"}, {"from": "CVCB3", "title": 0.7239776700834476, "to": "WEGE3"}, {"from": "CVCB3", "title": 0.7233662032785074, "to": "YDUQ3"}, {"from": "ELET3", "title": 0.4112641178063157, "to": "ELET6"}, {"from": "ELET3", "title": 0.5262722413967005, "to": "ENBR3"}, {"from": "ELET3", "title": 1.6889183234841814, "to": "EQTL3"}, {"from": "ELET3", "title": 1.6171905611328703, "to": "GGBR4"}, {"from": "ELET3", "title": 0.6953767477067101, "to": "HYPE3"}, {"from": "ELET3", "title": 2.140514674777972, "to": "ITSA4"}, {"from": "ELET3", "title": 2.081179101131686, "to": "ITUB4"}, {"from": "ELET3", "title": 1.9058552073985655, "to": "JBSS3"}, {"from": "ELET3", "title": 1.8618822492254241, "to": "KLBN11"}, {"from": "ELET3", "title": 2.336320055182561, "to": "LREN3"}, {"from": "ELET3", "title": 3.5893563265016915, "to": "MGLU3"}, {"from": "ELET3", "title": 2.1994192276436833, "to": "MRFG3"}, {"from": "ELET3", "title": 1.1147982739840734, "to": "MULT3"}, {"from": "ELET3", "title": 2.187351494850411, "to": "NTCO3"}, {"from": "ELET3", "title": 2.988659745120352, "to": "OIBR3"}, {"from": "ELET3", "title": 2.0676926245099336, "to": "PETR3"}, {"from": "ELET3", "title": 2.0511365875288083, "to": "PETR4"}, {"from": "ELET3", "title": 1.6583287595076017, "to": "RADL3"}, {"from": "ELET3", "title": 2.5892115717921453, "to": "RAIL3"}, {"from": "ELET3", "title": 2.552364799771895, "to": "RENT3"}, {"from": "ELET3", "title": 2.319101693853139, "to": "SBSP3"}, {"from": "ELET3", "title": 0.9261391135353462, "to": "TOTS3"}, {"from": "ELET3", "title": 2.344272755580673, "to": "USIM5"}, {"from": "ELET3", "title": 2.3253777924382666, "to": "VALE3"}, {"from": "ELET3", "title": 2.026687993103173, "to": "WEGE3"}, {"from": "ELET3", "title": 2.0275913259337446, "to": "YDUQ3"}, {"from": "ELET6", "title": 0.315304165043393, "to": "ENBR3"}, {"from": "ELET6", "title": 1.572919748235181, "to": "EQTL3"}, {"from": "ELET6", "title": 1.5018081356705997, "to": "GGBR4"}, {"from": "ELET6", "title": 0.538418546092069, "to": "HYPE3"}, {"from": "ELET6", "title": 2.0170741470952347, "to": "ITSA4"}, {"from": "ELET6", "title": 1.9589854322501088, "to": "ITUB4"}, {"from": "ELET6", "title": 1.8721663929662364, "to": "JBSS3"}, {"from": "ELET6", "title": 1.8309143067317333, "to": "KLBN11"}, {"from": "ELET6", "title": 2.208353372704803, "to": "LREN3"}, {"from": "ELET6", "title": 3.423878231808584, "to": "MGLU3"}, {"from": "ELET6", "title": 2.1485333741389065, "to": "MRFG3"}, {"from": "ELET6", "title": 0.9949474137222445, "to": "MULT3"}, {"from": "ELET6", "title": 2.062882894011712, "to": "NTCO3"}, {"from": "ELET6", "title": 2.896818734352503, "to": "OIBR3"}, {"from": "ELET6", "title": 1.9457731726307792, "to": "PETR3"}, {"from": "ELET6", "title": 1.9295489032767135, "to": "PETR4"}, {"from": "ELET6", "title": 1.6406001712993503, "to": "RADL3"}, {"from": "ELET6", "title": 2.4546532087001403, "to": "RAIL3"}, {"from": "ELET6", "title": 2.4188105035375536, "to": "RENT3"}, {"from": "ELET6", "title": 2.26159579890487, "to": "SBSP3"}, {"from": "ELET6", "title": 0.7968076111229966, "to": "TOTS3"}, {"from": "ELET6", "title": 2.2161104409703194, "to": "USIM5"}, {"from": "ELET6", "title": 2.1976789016542755, "to": "VALE3"}, {"from": "ELET6", "title": 1.905580161884845, "to": "WEGE3"}, {"from": "ELET6", "title": 1.9064659831247834, "to": "YDUQ3"}, {"from": "ENBR3", "title": 1.5040641996579311, "to": "EQTL3"}, {"from": "ENBR3", "title": 1.4331483713527613, "to": "GGBR4"}, {"from": "ENBR3", "title": 0.42597868822790974, "to": "HYPE3"}, {"from": "ENBR3", "title": 1.944534258870163, "to": "ITSA4"}, {"from": "ENBR3", "title": 1.8871106152606885, "to": "ITUB4"}, {"from": "ENBR3", "title": 1.8530348699936454, "to": "JBSS3"}, {"from": "ENBR3", "title": 1.813342847073171, "to": "KLBN11"}, {"from": "ENBR3", "title": 2.1333486343139882, "to": "LREN3"}, {"from": "ENBR3", "title": 3.3276267544821074, "to": "MGLU3"}, {"from": "ENBR3", "title": 2.119506348774225, "to": "MRFG3"}, {"from": "ENBR3", "title": 0.9210506678017232, "to": "MULT3"}, {"from": "ENBR3", "title": 1.9897891258607088, "to": "NTCO3"}, {"from": "ENBR3", "title": 2.8440974054488644, "to": "OIBR3"}, {"from": "ENBR3", "title": 1.8740434461599436, "to": "PETR3"}, {"from": "ENBR3", "title": 1.8579940648763769, "to": "PETR4"}, {"from": "ENBR3", "title": 1.630588868653153, "to": "RADL3"}, {"from": "ENBR3", "title": 2.375981413283701, "to": "RAIL3"}, {"from": "ENBR3", "title": 2.340701035829284, "to": "RENT3"}, {"from": "ENBR3", "title": 2.228747448921674, "to": "SBSP3"}, {"from": "ENBR3", "title": 0.7142324733464063, "to": "TOTS3"}, {"from": "ENBR3", "title": 2.1409979023043872, "to": "USIM5"}, {"from": "ENBR3", "title": 2.122821591402262, "to": "VALE3"}, {"from": "ENBR3", "title": 1.834276887875758, "to": "WEGE3"}, {"from": "ENBR3", "title": 1.8351535594463129, "to": "YDUQ3"}, {"from": "EQTL3", "title": 0.3126344987440452, "to": "GGBR4"}, {"from": "EQTL3", "title": 0.9881154856834956, "to": "HYPE3"}, {"from": "EQTL3", "title": 0.8442617861527981, "to": "ITSA4"}, {"from": "EQTL3", "title": 0.7807255844492249, "to": "ITUB4"}, {"from": "EQTL3", "title": 1.6348601350461003, "to": "JBSS3"}, {"from": "EQTL3", "title": 1.6138404602696608, "to": "KLBN11"}, {"from": "EQTL3", "title": 1.0363761574744603, "to": "LREN3"}, {"from": "EQTL3", "title": 2.0333284061511345, "to": "MGLU3"}, {"from": "EQTL3", "title": 1.780306376502185, "to": "MRFG3"}, {"from": "EQTL3", "title": 0.8145225186703716, "to": "MULT3"}, {"from": "EQTL3", "title": 0.8923703891563077, "to": "NTCO3"}, {"from": "EQTL3", "title": 2.2038947769742054, "to": "OIBR3"}, {"from": "EQTL3", "title": 0.7658135477849801, "to": "PETR3"}, {"from": "EQTL3", "title": 0.7472378188633075, "to": "PETR4"}, {"from": "EQTL3", "title": 1.5195870748146865, "to": "RADL3"}, {"from": "EQTL3", "title": 1.2599510198169372, "to": "RAIL3"}, {"from": "EQTL3", "title": 1.2285731658668735, "to": "RENT3"}, {"from": "EQTL3", "title": 1.8418424667523925, "to": "SBSP3"}, {"from": "EQTL3", "title": 0.9067231879940131, "to": "TOTS3"}, {"from": "EQTL3", "title": 1.043751714317779, "to": "USIM5"}, {"from": "EQTL3", "title": 1.026182870808477, "to": "VALE3"}, {"from": "EQTL3", "title": 0.7192168493242729, "to": "WEGE3"}, {"from": "EQTL3", "title": 0.7202654846550641, "to": "YDUQ3"}, {"from": "GGBR4", "title": 0.9611331949674022, "to": "HYPE3"}, {"from": "GGBR4", "title": 0.9231271161465234, "to": "ITSA4"}, {"from": "GGBR4", "title": 0.8623301404949417, "to": "ITUB4"}, {"from": "GGBR4", "title": 1.645398204553355, "to": "JBSS3"}, {"from": "GGBR4", "title": 1.623434622817428, "to": "KLBN11"}, {"from": "GGBR4", "title": 1.109966279402767, "to": "LREN3"}, {"from": "GGBR4", "title": 2.1094118417276357, "to": "MGLU3"}, {"from": "GGBR4", "title": 1.7971033918345702, "to": "MRFG3"}, {"from": "GGBR4", "title": 0.7712154507481265, "to": "MULT3"}, {"from": "GGBR4", "title": 0.969537704518823, "to": "NTCO3"}, {"from": "GGBR4", "title": 2.236952394156986, "to": "OIBR3"}, {"from": "GGBR4", "title": 0.8481546250031284, "to": "PETR3"}, {"from": "GGBR4", "title": 0.8305516931768077, "to": "PETR4"}, {"from": "GGBR4", "title": 1.5248046116952028, "to": "RADL3"}, {"from": "GGBR4", "title": 1.331091777572787, "to": "RAIL3"}, {"from": "GGBR4", "title": 1.2998879552943612, "to": "RENT3"}, {"from": "GGBR4", "title": 1.8611625335241828, "to": "SBSP3"}, {"from": "GGBR4", "title": 0.8727127075325556, "to": "TOTS3"}, {"from": "GGBR4", "title": 1.1172088157133933, "to": "USIM5"}, {"from": "GGBR4", "title": 1.0999639244547985, "to": "VALE3"}, {"from": "GGBR4", "title": 0.8041226927530223, "to": "WEGE3"}, {"from": "GGBR4", "title": 0.8051089097149822, "to": "YDUQ3"}, {"from": "HYPE3", "title": 1.816678581943433, "to": "ITSA4"}, {"from": "HYPE3", "title": 1.7602830251462223, "to": "ITUB4"}, {"from": "HYPE3", "title": 1.8205705524886133, "to": "JBSS3"}, {"from": "HYPE3", "title": 1.7835516015544557, "to": "KLBN11"}, {"from": "HYPE3", "title": 2.001558640545133, "to": "LREN3"}, {"from": "HYPE3", "title": 3.160008596125035, "to": "MGLU3"}, {"from": "HYPE3", "title": 2.0700222891802573, "to": "MRFG3"}, {"from": "HYPE3", "title": 0.7819235421316041, "to": "MULT3"}, {"from": "HYPE3", "title": 1.8610636844481594, "to": "NTCO3"}, {"from": "HYPE3", "title": 2.753616623909158, "to": "OIBR3"}, {"from": "HYPE3", "title": 1.7474372340713984, "to": "PETR3"}, {"from": "HYPE3", "title": 1.7316530635073688, "to": "PETR4"}, {"from": "HYPE3", "title": 1.613697042157836, "to": "RADL3"}, {"from": "HYPE3", "title": 2.2381550437223456, "to": "RAIL3"}, {"from": "HYPE3", "title": 2.2038088983720137, "to": "RENT3"}, {"from": "HYPE3", "title": 2.17266845800223, "to": "SBSP3"}, {"from": "HYPE3", "title": 0.5489360323602172, "to": "TOTS3"}, {"from": "HYPE3", "title": 2.0090328342742216, "to": "USIM5"}, {"from": "HYPE3", "title": 1.9912707152079465, "to": "VALE3"}, {"from": "HYPE3", "title": 1.7083138907362523, "to": "WEGE3"}, {"from": "HYPE3", "title": 1.709176891942085, "to": "YDUQ3"}, {"from": "ITSA4", "title": 0.2758947857141117, "to": "ITUB4"}, {"from": "ITSA4", "title": 1.5798731154397487, "to": "JBSS3"}, {"from": "ITSA4", "title": 1.5638588910214075, "to": "KLBN11"}, {"from": "ITSA4", "title": 0.5161077699997184, "to": "LREN3"}, {"from": "ITSA4", "title": 1.5882740471514716, "to": "MGLU3"}, {"from": "ITSA4", "title": 1.69180643245122, "to": "MRFG3"}, {"from": "ITSA4", "title": 1.007285491304839, "to": "MULT3"}, {"from": "ITSA4", "title": 0.24818365027843337, "to": "NTCO3"}, {"from": "ITSA4", "title": 2.0264353267713333, "to": "OIBR3"}, {"from": "ITSA4", "title": 0.3051564609357261, "to": "PETR3"}, {"from": "ITSA4", "title": 0.3374043328605232, "to": "PETR4"}, {"from": "ITSA4", "title": 1.4926210396368784, "to": "RADL3"}, {"from": "ITSA4", "title": 0.8030398389830239, "to": "RAIL3"}, {"from": "ITSA4", "title": 0.7663582854417914, "to": "RENT3"}, {"from": "ITSA4", "title": 1.739694554974398, "to": "SBSP3"}, {"from": "ITSA4", "title": 1.0637790657364405, "to": "TOTS3"}, {"from": "ITSA4", "title": 0.5269518190764513, "to": "USIM5"}, {"from": "ITSA4", "title": 0.5008663129724717, "to": "VALE3"}, {"from": "ITSA4", "title": 0.37965306002239835, "to": "WEGE3"}, {"from": "ITSA4", "title": 0.37818457201289374, "to": "YDUQ3"}, {"from": "ITUB4", "title": 1.5860716077243664, "to": "JBSS3"}, {"from": "ITUB4", "title": 1.569486173774123, "to": "KLBN11"}, {"from": "ITUB4", "title": 0.5966871093053924, "to": "LREN3"}, {"from": "ITUB4", "title": 1.6436394389689528, "to": "MGLU3"}, {"from": "ITUB4", "title": 1.7018584246250767, "to": "MRFG3"}, {"from": "ITUB4", "title": 0.987743842393851, "to": "MULT3"}, {"from": "ITUB4", "title": 0.37836707195327623, "to": "NTCO3"}, {"from": "ITUB4", "title": 2.046895437608643, "to": "OIBR3"}, {"from": "ITUB4", "title": 0.132948238060876, "to": "PETR3"}, {"from": "ITUB4", "title": 0.1980310132673361, "to": "PETR4"}, {"from": "ITUB4", "title": 1.4956386836082567, "to": "RADL3"}, {"from": "ITUB4", "title": 0.865746353454859, "to": "RAIL3"}, {"from": "ITUB4", "title": 0.830464402971239, "to": "RENT3"}, {"from": "ITUB4", "title": 1.7513285929961868, "to": "SBSP3"}, {"from": "ITUB4", "title": 1.0475060322653873, "to": "TOTS3"}, {"from": "ITUB4", "title": 0.6064602314811423, "to": "USIM5"}, {"from": "ITUB4", "title": 0.5830283691595051, "to": "VALE3"}, {"from": "ITUB4", "title": 0.2659128604807773, "to": "WEGE3"}, {"from": "ITUB4", "title": 0.2637285408177501, "to": "YDUQ3"}, {"from": "JBSS3", "title": 1.9485886898792455, "to": "KLBN11"}, {"from": "JBSS3", "title": 2.671814897045332, "to": "LREN3"}, {"from": "JBSS3", "title": 4.029439553124359, "to": "MGLU3"}, {"from": "JBSS3", "title": 2.340225586525638, "to": "MRFG3"}, {"from": "JBSS3", "title": 1.4047411147809847, "to": "MULT3"}, {"from": "JBSS3", "title": 2.5125483686821353, "to": "NTCO3"}, {"from": "JBSS3", "title": 3.2394021512971385, "to": "OIBR3"}, {"from": "JBSS3", "title": 2.385171888697876, "to": "PETR3"}, {"from": "JBSS3", "title": 2.3675919161281143, "to": "PETR4"}, {"from": "JBSS3", "title": 1.7085152008483417, "to": "RADL3"}, {"from": "JBSS3", "title": 2.9436084331565997, "to": "RAIL3"}, {"from": "JBSS3", "title": 2.9039113781104544, "to": "RENT3"}, {"from": "JBSS3", "title": 2.4777551366172212, "to": "SBSP3"}, {"from": "JBSS3", "title": 1.2253632500531706, "to": "TOTS3"}, {"from": "JBSS3", "title": 2.6803365009916935, "to": "USIM5"}, {"from": "JBSS3", "title": 2.6600928655260234, "to": "VALE3"}, {"from": "JBSS3", "title": 2.341652184042422, "to": "WEGE3"}, {"from": "JBSS3", "title": 2.342610159766034, "to": "YDUQ3"}, {"from": "KLBN11", "title": 2.858488732454749, "to": "LREN3"}, {"from": "KLBN11", "title": 4.27744073949394, "to": "MGLU3"}, {"from": "KLBN11", "title": 2.4226853786575866, "to": "MRFG3"}, {"from": "KLBN11", "title": 1.5563259826129368, "to": "MULT3"}, {"from": "KLBN11", "title": 2.692951103195455, "to": "NTCO3"}, {"from": "KLBN11", "title": 3.384263610620239, "to": "OIBR3"}, {"from": "KLBN11", "title": 2.5607920831779833, "to": "PETR3"}, {"from": "KLBN11", "title": 2.542570317994123, "to": "PETR4"}, {"from": "KLBN11", "title": 1.7386327771671504, "to": "RADL3"}, {"from": "KLBN11", "title": 3.1415932950552707, "to": "RAIL3"}, {"from": "KLBN11", "title": 3.100202586654323, "to": "RENT3"}, {"from": "KLBN11", "title": 2.570383824444566, "to": "SBSP3"}, {"from": "KLBN11", "title": 1.3773423801713973, "to": "TOTS3"}, {"from": "KLBN11", "title": 2.867354018426266, "to": "USIM5"}, {"from": "KLBN11", "title": 2.8462952223895406, "to": "VALE3"}, {"from": "KLBN11", "title": 2.515692268577496, "to": "WEGE3"}, {"from": "KLBN11", "title": 2.5166847102156265, "to": "YDUQ3"}, {"from": "LREN3", "title": 1.4110525851938043, "to": "MGLU3"}, {"from": "LREN3", "title": 1.6615875438821661, "to": "MRFG3"}, {"from": "LREN3", "title": 1.0632195299556346, "to": "MULT3"}, {"from": "LREN3", "title": 0.42509427415118123, "to": "NTCO3"}, {"from": "LREN3", "title": 1.9644004713647172, "to": "OIBR3"}, {"from": "LREN3", "title": 0.5632379019219644, "to": "PETR3"}, {"from": "LREN3", "title": 0.5792432801577033, "to": "PETR4"}, {"from": "LREN3", "title": 1.4836206747748841, "to": "RADL3"}, {"from": "LREN3", "title": 0.5779444520302636, "to": "RAIL3"}, {"from": "LREN3", "title": 0.5321821290478645, "to": "RENT3"}, {"from": "LREN3", "title": 1.7046664601724628, "to": "SBSP3"}, {"from": "LREN3", "title": 1.1107143314593362, "to": "TOTS3"}, {"from": "LREN3", "title": 0.09990797442845543, "to": "USIM5"}, {"from": "LREN3", "title": 0.11695479780161307, "to": "VALE3"}, {"from": "LREN3", "title": 0.6018778794719348, "to": "WEGE3"}, {"from": "LREN3", "title": 0.6010614803092813, "to": "YDUQ3"}, {"from": "MGLU3", "title": 1.543142205215844, "to": "MRFG3"}, {"from": "MGLU3", "title": 1.2506978035606549, "to": "MULT3"}, {"from": "MGLU3", "title": 1.043224377457163, "to": "NTCO3"}, {"from": "MGLU3", "title": 1.7121665666313115, "to": "OIBR3"}, {"from": "MGLU3", "title": 1.075516505115531, "to": "PETR3"}, {"from": "MGLU3", "title": 1.0797680922885362, "to": "PETR4"}, {"from": "MGLU3", "title": 1.4494102878607673, "to": "RADL3"}, {"from": "MGLU3", "title": 0.9112512001461682, "to": "RAIL3"}, {"from": "MGLU3", "title": 0.9251143571296881, "to": "RENT3"}, {"from": "MGLU3", "title": 1.5665112187310781, "to": "SBSP3"}, {"from": "MGLU3", "title": 1.2712142988348007, "to": "TOTS3"}, {"from": "MGLU3", "title": 0.996373616841159, "to": "USIM5"}, {"from": "MGLU3", "title": 1.0023057765803414, "to": "VALE3"}, {"from": "MGLU3", "title": 1.085954025760919, "to": "WEGE3"}, {"from": "MGLU3", "title": 1.0857274095973335, "to": "YDUQ3"}, {"from": "MRFG3", "title": 0.5345099403169662, "to": "MULT3"}, {"from": "MRFG3", "title": 1.6679699796483902, "to": "NTCO3"}, {"from": "MRFG3", "title": 2.6241469807278874, "to": "OIBR3"}, {"from": "MRFG3", "title": 1.5566765827255842, "to": "PETR3"}, {"from": "MRFG3", "title": 1.541160784941731, "to": "PETR4"}, {"from": "MRFG3", "title": 1.590183283600225, "to": "RADL3"}, {"from": "MRFG3", "title": 2.033496667992228, "to": "RAIL3"}, {"from": "MRFG3", "title": 2.0003931415583884, "to": "RENT3"}, {"from": "MRFG3", "title": 2.093126695454729, "to": "SBSP3"}, {"from": "MRFG3", "title": 0.11958551736195727, "to": "TOTS3"}, {"from": "MRFG3", "title": 1.8120030936474647, "to": "USIM5"}, {"from": "MRFG3", "title": 1.7947599928368985, "to": "VALE3"}, {"from": "MRFG3", "title": 1.5181910723960943, "to": "WEGE3"}, {"from": "MRFG3", "title": 1.5190410080249317, "to": "YDUQ3"}, {"from": "MULT3", "title": 1.4779658045996265, "to": "NTCO3"}, {"from": "MULT3", "title": 2.5050756548606, "to": "OIBR3"}, {"from": "MULT3", "title": 1.3676108515336811, "to": "PETR3"}, {"from": "MULT3", "title": 1.3521471641814364, "to": "PETR4"}, {"from": "MULT3", "title": 1.569267418227707, "to": "RADL3"}, {"from": "MULT3", "title": 1.835279707533597, "to": "RAIL3"}, {"from": "MULT3", "title": 1.8031658100969046, "to": "RENT3"}, {"from": "MULT3", "title": 2.0207781090915193, "to": "SBSP3"}, {"from": "MULT3", "title": 0.48731565845731445, "to": "TOTS3"}, {"from": "MULT3", "title": 1.6195563994903843, "to": "USIM5"}, {"from": "MULT3", "title": 1.6026680270153368, "to": "VALE3"}, {"from": "MULT3", "title": 1.329215262561415, "to": "WEGE3"}, {"from": "MULT3", "title": 1.330064659242572, "to": "YDUQ3"}, {"from": "NTCO3", "title": 2.0108468754629456, "to": "OIBR3"}, {"from": "NTCO3", "title": 0.38741849296550657, "to": "PETR3"}, {"from": "NTCO3", "title": 0.41254722217905815, "to": "PETR4"}, {"from": "NTCO3", "title": 1.4903382103329055, "to": "RADL3"}, {"from": "NTCO3", "title": 0.7522307003701643, "to": "RAIL3"}, {"from": "NTCO3", "title": 0.7141449760907813, "to": "RENT3"}, {"from": "NTCO3", "title": 1.7308572652645404, "to": "SBSP3"}, {"from": "NTCO3", "title": 1.0759045823502682, "to": "TOTS3"}, {"from": "NTCO3", "title": 0.4578505126924225, "to": "USIM5"}, {"from": "NTCO3", "title": 0.42850552358138355, "to": "VALE3"}, {"from": "NTCO3", "title": 0.4467491954413809, "to": "WEGE3"}, {"from": "NTCO3", "title": 0.44553924405084255, "to": "YDUQ3"}, {"from": "OIBR3", "title": 0.43528914506465477, "to": "PETR3"}, {"from": "OIBR3", "title": 0.4573300755268861, "to": "PETR4"}, {"from": "OIBR3", "title": 1.4887581092444877, "to": "RADL3"}, {"from": "OIBR3", "title": 0.7150002793700148, "to": "RAIL3"}, {"from": "OIBR3", "title": 0.6756969691284498, "to": "RENT3"}, {"from": "OIBR3", "title": 1.7247218290435593, "to": "SBSP3"}, {"from": "OIBR3", "title": 1.0842073373569938, "to": "TOTS3"}, {"from": "OIBR3", "title": 0.4032186581092497, "to": "USIM5"}, {"from": "OIBR3", "title": 0.37030922162726876, "to": "VALE3"}, {"from": "OIBR3", "title": 0.487765047082879, "to": "WEGE3"}, {"from": "OIBR3", "title": 0.48668069633293387, "to": "YDUQ3"}, {"from": "PETR3", "title": 0.14742156279889815, "to": "PETR4"}, {"from": "PETR3", "title": 1.4963447743684741, "to": "RADL3"}, {"from": "PETR3", "title": 0.8797912173160203, "to": "RAIL3"}, {"from": "PETR3", "title": 0.8447800622748795, "to": "RENT3"}, {"from": "PETR3", "title": 1.7540430471714648, "to": "SBSP3"}, {"from": "PETR3", "title": 1.0436569171450572, "to": "TOTS3"}, {"from": "PETR3", "title": 0.6236234848579675, "to": "USIM5"}, {"from": "PETR3", "title": 0.6006544763573071, "to": "VALE3"}, {"from": "PETR3", "title": 0.23131643331574747, "to": "WEGE3"}, {"from": "PETR3", "title": 0.22877952429662202, "to": "YDUQ3"}, {"from": "PETR4", "title": 1.497222043250593, "to": "RADL3"}, {"from": "PETR4", "title": 0.8969436637074226, "to": "RAIL3"}, {"from": "PETR4", "title": 0.8622443858418916, "to": "RENT3"}, {"from": "PETR4", "title": 1.7574115079528965, "to": "SBSP3"}, {"from": "PETR4", "title": 1.0388522443208792, "to": "TOTS3"}, {"from": "PETR4", "title": 0.64432183468532, "to": "USIM5"}, {"from": "PETR4", "title": 0.621869155229522, "to": "VALE3"}, {"from": "PETR4", "title": 0.17922958533586392, "to": "WEGE3"}, {"from": "PETR4", "title": 0.17590679251029798, "to": "YDUQ3"}, {"from": "RADL3", "title": 4.605326404050362, "to": "RAIL3"}, {"from": "RADL3", "title": 4.550150165833689, "to": "RENT3"}, {"from": "RADL3", "title": 3.317825880278363, "to": "SBSP3"}, {"from": "RADL3", "title": 2.370669030413943, "to": "TOTS3"}, {"from": "RADL3", "title": 4.241091797497962, "to": "USIM5"}, {"from": "RADL3", "title": 4.213263461236067, "to": "VALE3"}, {"from": "RADL3", "title": 3.779602194135745, "to": "WEGE3"}, {"from": "RADL3", "title": 3.780893854921833, "to": "YDUQ3"}, {"from": "RAIL3", "title": 0.2086426127605173, "to": "RENT3"}, {"from": "RAIL3", "title": 1.6662073213493382, "to": "SBSP3"}, {"from": "RAIL3", "title": 1.1590310137159834, "to": "TOTS3"}, {"from": "RAIL3", "title": 0.5269395875276528, "to": "USIM5"}, {"from": "RAIL3", "title": 0.5458382438386903, "to": "VALE3"}, {"from": "RAIL3", "title": 0.7724203094227212, "to": "WEGE3"}, {"from": "RAIL3", "title": 0.7718753787065653, "to": "YDUQ3"}, {"from": "RENT3", "title": 1.6713821996316136, "to": "SBSP3"}, {"from": "RENT3", "title": 1.152710885180666, "to": "TOTS3"}, {"from": "RENT3", "title": 0.489227043225969, "to": "USIM5"}, {"from": "RENT3", "title": 0.509968881902079, "to": "VALE3"}, {"from": "RENT3", "title": 0.7519361617491508, "to": "WEGE3"}, {"from": "RENT3", "title": 0.7513639151021951, "to": "YDUQ3"}, {"from": "SBSP3", "title": 0.5551114337656595, "to": "TOTS3"}, {"from": "SBSP3", "title": 1.5612800294203473, "to": "USIM5"}, {"from": "SBSP3", "title": 1.5444608170131795, "to": "VALE3"}, {"from": "SBSP3", "title": 1.2711312953778646, "to": "WEGE3"}, {"from": "SBSP3", "title": 1.2719838768100138, "to": "YDUQ3"}, {"from": "TOTS3", "title": 1.8016230432482936, "to": "USIM5"}, {"from": "TOTS3", "title": 1.784403358603107, "to": "VALE3"}, {"from": "TOTS3", "title": 1.508091875849819, "to": "WEGE3"}, {"from": "TOTS3", "title": 1.5089414271369663, "to": "YDUQ3"}, {"from": "USIM5", "title": 0.15343575846309643, "to": "VALE3"}, {"from": "USIM5", "title": 0.6085967810542947, "to": "WEGE3"}, {"from": "USIM5", "title": 0.607793419052326, "to": "YDUQ3"}, {"from": "VALE3", "title": 0.5924347869823122, "to": "WEGE3"}, {"from": "VALE3", "title": 0.5915996410099862, "to": "YDUQ3"}, {"from": "WEGE3", "title": 0.034631018338802305, "to": "YDUQ3"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
